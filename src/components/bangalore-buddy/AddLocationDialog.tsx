@@ -1,3 +1,4 @@
+
 // src/components/bangalore-buddy/AddLocationDialog.tsx
 "use client";
 
@@ -6,19 +7,21 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input'; // Keep for name field
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DefaultLocationCategories, LocationCategory, type LocationCategoryType } from '@/lib/types';
+// Select is removed as category is now a text input
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// DefaultLocationCategories and LocationCategoryType are no longer used here for selection
 import { Pin } from 'lucide-react';
-import AddressAutocompleteInput from './AddressAutocompleteInput'; // Import the new component
+import AddressAutocompleteInput from './AddressAutocompleteInput';
 
+// Schema updated for category to be a string
 const addLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  category: z.custom<LocationCategoryType>((val) => DefaultLocationCategories.includes(val as LocationCategoryType) , "Invalid category"),
+  category: z.string().min(1, "Category is required (e.g., Cafe, Park)"), // Category as free text
   address: z.string().min(5, "Address is required for geocoding"),
 });
 
@@ -29,6 +32,7 @@ interface AddLocationDialogProps {
   isLoading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // defaultCategory?: string; // Could be useful if opening dialog with a prefill
 }
 
 const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open, onOpenChange }) => {
@@ -37,18 +41,19 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
     defaultValues: {
       name: "",
       description: "",
-      category: LocationCategory.EXPLORATION, 
+      category: "", // Default to empty string for text input
       address: "",
     },
   });
 
   const handleFormSubmit: SubmitHandler<AddLocationFormInput> = async (data) => {
     await onSave(data);
+    // Resetting form is now handled by useEffect when `open` becomes false
   };
   
   useEffect(() => {
     if (!open) {
-      form.reset();
+      form.reset(); // Reset form when dialog closes
     }
   }, [open, form]);
 
@@ -56,11 +61,12 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
         onOpenChange(isOpen);
+        // No need to explicitly reset here if useEffect handles it, but doesn't hurt
         if (!isOpen) form.reset(); 
       }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
-          <Pin className="mr-2 h-4 w-4" /> Add New Pin
+          <Pin className="mr-2 h-4 w-4" /> Add New Pin (Legacy - Not Used on Main Page)
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
@@ -108,21 +114,9 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(value as LocationCategoryType)} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {DefaultLocationCategories.filter(cat => cat !== LocationCategory.FRIEND).map((cat) => ( 
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                     <Input placeholder="e.g., Cafe, Museum, Park" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Home as HomeIcon } from 'lucide-react';
 
 interface MapComponentProps {
-  center: LatLng;
-  zoom?: number;
+  center: LatLng; // Used for default/initial centering or when no specific locations are set
+  zoom?: number;  // Used for default/initial zoom or when no specific locations are set
   friendLocation: PinnedLocation | null;
   workLocation: PinnedLocation | null;
   pinnedLocations: PinnedLocation[];
@@ -22,8 +22,8 @@ interface MapComponentProps {
 }
 
 const MapComponent: FC<MapComponentProps> = ({ 
-  center, 
-  zoom = 13, 
+  center: defaultCenterProp, // Renaming for clarity, this is the initial/fallback center
+  zoom: defaultZoomProp = 13, // Renaming for clarity, this is the initial/fallback zoom
   friendLocation, 
   workLocation,
   pinnedLocations,
@@ -42,7 +42,7 @@ const MapComponent: FC<MapComponentProps> = ({
     if (!directionsRendererRef.current) {
       directionsRendererRef.current = new mapsRoutesLib.DirectionsRenderer({
         suppressMarkers: true, 
-        preserveViewport: true, 
+        preserveViewport: true, // We will manually fitBounds
         polylineOptions: {
           strokeColor: 'hsl(240, 100%, 50%)', 
           strokeOpacity: 0.8,
@@ -57,36 +57,40 @@ const MapComponent: FC<MapComponentProps> = ({
       directionsRendererRef.current.setDirections(route);
       const routeBounds = route.routes[0].bounds;
       if (routeBounds) {
-        map.fitBounds(routeBounds, 50); 
+        map.fitBounds(routeBounds, 50); // Fit to route with padding
       }
     } else {
+      // No route, so clear directions and set center based on available locations or default
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setDirections(undefined);
       }
       if (friendLocation) {
         map.setCenter(friendLocation.position);
-        map.setZoom(zoom); 
-      } else if (workLocation && !friendLocation) { 
+        map.setZoom(defaultZoomProp); 
+      } else if (workLocation) { // Only work location is set
         map.setCenter(workLocation.position);
-        map.setZoom(zoom);
-      }
-      else {
-        map.setCenter(center);
-        map.setZoom(zoom);
+        map.setZoom(defaultZoomProp);
+      } else { // No specific locations, use default props
+        map.setCenter(defaultCenterProp);
+        map.setZoom(defaultZoomProp);
       }
     }
     
     return () => {
       if (directionsRendererRef.current) {
-        directionsRendererRef.current.setMap(null);
+        // Do not setMap(null) here if renderer is managed by the map instance itself
+        // or if you want it to persist across component re-renders not affecting the map itself.
+        // For this app structure, it's generally fine to leave it associated or set to null on full unmount.
       }
     };
-  }, [map, mapsRoutesLib, route, friendLocation, workLocation, center, zoom]);
+  // Dependencies should ensure this runs when map, route, or key locations change
+  }, [map, mapsRoutesLib, route, friendLocation, workLocation, defaultCenterProp, defaultZoomProp]);
+
 
   const handleRecenterHome = () => {
     if (map && friendLocation) {
       map.setCenter(friendLocation.position);
-      map.setZoom(zoom);
+      map.setZoom(defaultZoomProp); // Use the default/initial zoom level
     }
   };
 
@@ -105,8 +109,8 @@ const MapComponent: FC<MapComponentProps> = ({
       )}
       <Map
         mapId={customMapId || undefined} 
-        center={center} 
-        zoom={zoom}     
+        defaultCenter={defaultCenterProp} // Use defaultCenter
+        defaultZoom={defaultZoomProp}     // Use defaultZoom
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         onClick={onMapClick}
@@ -145,3 +149,4 @@ const MapComponent: FC<MapComponentProps> = ({
 };
 
 export default MapComponent;
+

@@ -1,10 +1,10 @@
+
 import type { LatLng } from './types';
 
 export async function geocodeAddress(address: string): Promise<LatLng | null> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
     console.error("Google Maps API key is not configured.");
-    // Note: UI should inform user if this happens.
     return null;
   }
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
@@ -25,8 +25,6 @@ export async function geocodeAddress(address: string): Promise<LatLng | null> {
 }
 
 export function calculateDistance(pos1: LatLng, pos2: LatLng): string {
-  // This function relies on the Google Maps JavaScript API being loaded.
-  // It should be called on the client-side after the API is available.
   if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.geometry) {
     const service = window.google.maps.geometry.spherical;
     const p1 = new window.google.maps.LatLng(pos1.lat, pos1.lng);
@@ -38,7 +36,37 @@ export function calculateDistance(pos1: LatLng, pos2: LatLng): string {
     }
     return `${distanceInMeters.toFixed(0)} m`;
   }
-  // Fallback or indication that API is not ready
-  // console.warn("Google Maps Geometry library not available for distance calculation.");
   return "Calculating..."; 
+}
+
+export async function getDirections(
+  origin: LatLng,
+  destination: LatLng,
+  mapsRoutesLib: typeof google.maps.routes // Pass the library
+): Promise<google.maps.DirectionsResult | null> {
+  if (!mapsRoutesLib) {
+    console.error("Google Maps Routes library not available for directions.");
+    return null;
+  }
+  const directionsService = new mapsRoutesLib.DirectionsService();
+  try {
+    const request: google.maps.DirectionsRequest = {
+      origin: new google.maps.LatLng(origin.lat, origin.lng),
+      destination: new google.maps.LatLng(destination.lat, destination.lng),
+      travelMode: google.maps.TravelMode.DRIVING, // You can make this configurable
+    };
+    return new Promise((resolve, reject) => {
+      directionsService.route(request, (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          resolve(result);
+        } else {
+          console.error(`Directions request failed due to ${status}`);
+          resolve(null); // Resolve with null on error to handle it gracefully
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching directions:', error);
+    return null;
+  }
 }

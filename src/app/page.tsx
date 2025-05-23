@@ -7,10 +7,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
+
 
 import type { LatLng, PinnedLocation } from '@/lib/types';
-import { LocationCategory } from '@/lib/types'; // Will use for setting predefined categories
-import { geocodeAddress, calculateDistance } from '@/lib/maps';
+import { LocationCategory } from '@/lib/types';
+import { geocodeAddress, calculateDistance, getDirections } from '@/lib/maps';
 import { generateLocationRecommendations, type GenerateLocationRecommendationsInput } from '@/ai/flows/generate-location-recommendations';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, setDoc, query, where, orderBy, deleteDoc, getDoc } from 'firebase/firestore';
@@ -33,7 +35,6 @@ const LOCATIONS_COLLECTION = 'pinned_locations';
 const FRIEND_HOME_DOC_ID = 'friend_special_home_location';
 const FRIEND_WORK_DOC_ID = 'friend_special_work_location';
 
-// Schemas for new forms
 const addressOnlySchema = z.object({
   address: z.string().min(5, "Address is required for geocoding"),
 });
@@ -53,6 +54,7 @@ export default function HomePage() {
   const [friendWorkLocation, setFriendWorkLocation] = useState<PinnedLocation | null>(null);
   const [otherPinnedLocations, setOtherPinnedLocations] = useState<PinnedLocation[]>([]);
   const [aiRecommendations, setAiRecommendations] = useState<string | null>(null);
+  const [homeToWorkRoute, setHomeToWorkRoute] = useState<google.maps.DirectionsResult | null>(null);
   
   const [isAiLoading, setIsAiLoading] = useState(false); 
   const [isHomeSaving, setIsHomeSaving] = useState(false);
@@ -61,6 +63,7 @@ export default function HomePage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   const { toast } = useToast();
+  const mapsRoutesLib = useMapsLibrary('routes');
 
   const homeForm = useForm<AddressOnlyFormInput>({ resolver: zodResolver(addressOnlySchema) });
   const workForm = useForm<AddressOnlyFormInput>({ resolver: zodResolver(addressOnlySchema) });
@@ -77,7 +80,6 @@ export default function HomePage() {
     }
     setIsDataLoading(true);
     try {
-      // Fetch friend's home location
       const friendHomeDocRef = doc(db, LOCATIONS_COLLECTION, FRIEND_HOME_DOC_ID);
       const friendHomeDocSnap = await getDoc(friendHomeDocRef);
       if (friendHomeDocSnap.exists()) {
@@ -91,7 +93,6 @@ export default function HomePage() {
         homeForm.reset({ address: "" });
       }
 
-      // Fetch friend's work location
       const friendWorkDocRef = doc(db, LOCATIONS_COLLECTION, FRIEND_WORK_DOC_ID);
       const friendWorkDocSnap = await getDoc(friendWorkDocRef);
       if (friendWorkDocSnap.exists()) {
@@ -103,7 +104,6 @@ export default function HomePage() {
         workForm.reset({ address: "" });
       }
 
-      // Fetch other pinned locations
       const q = query(collection(db, LOCATIONS_COLLECTION), 
         where("__name__", "not-in", [FRIEND_HOME_DOC_ID, FRIEND_WORK_DOC_ID]),
         orderBy("name")
@@ -128,6 +128,18 @@ export default function HomePage() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib) {
+      const fetchRoute = async () => {
+        const routeResult = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib);
+        setHomeToWorkRoute(routeResult);
+      };
+      fetchRoute();
+    } else {
+      setHomeToWorkRoute(null); // Clear route if locations or library are not available
+    }
+  }, [friendHomeLocation?.position, friendWorkLocation?.position, mapsRoutesLib]);
+
   const handleOriginalLocationFormSubmit = async (data: OriginalLocationFormInputType) => {
      if (!db || !db.app?.options?.projectId) {
       toast({ title: "Database Error", description: "Firestore is not configured for saving.", variant: "destructive" });
@@ -143,7 +155,7 @@ export default function HomePage() {
 
     try {
       const aiInput: GenerateLocationRecommendationsInput = {
-        address: friendHomeLocation.address, // Use saved friend's home address
+        address: friendHomeLocation.address,
         categories: data.categories,
         details: data.details,
       };
@@ -286,13 +298,13 @@ export default function HomePage() {
           <OriginalLocationForm 
             onSubmit={handleOriginalLocationFormSubmit} 
             isLoading={isAiLoading} 
-            isFriendHomeSet={!!friendHomeLocation} // Pass down if home is set
+            isFriendHomeSet={!!friendHomeLocation}
           />
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
-              <CardDescription>Set your friend's primary residential address. This is used for AI recommendations.</CardDescription>
+              <CardDescription>Set your friend's primary residential address. This is used for AI recommendations and routing.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...homeForm}>
@@ -322,7 +334,7 @@ export default function HomePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Friend's Work</CardTitle>
-              <CardDescription>Set your friend's workplace address.</CardDescription>
+              <CardDescription>Set your friend's workplace address for routing.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...workForm}>
@@ -394,6 +406,7 @@ export default function HomePage() {
             friendLocation={friendHomeLocation}
             workLocation={friendWorkLocation} 
             pinnedLocations={otherPinnedLocations}
+            route={homeToWorkRoute} // Pass the route to the map
           />
         </div>
       </main>
@@ -403,4 +416,3 @@ export default function HomePage() {
     </div>
   );
 }
-

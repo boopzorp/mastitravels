@@ -21,7 +21,7 @@ import OriginalLocationForm, { type LocationFormInput as OriginalLocationFormInp
 import AddressAutocompleteInput from '@/components/bangalore-buddy/AddressAutocompleteInput';
 import PinnedLocationsList from '@/components/bangalore-buddy/PinnedLocationsList';
 import RecommendationsDisplay from '@/components/bangalore-buddy/RecommendationsDisplay';
-import DirectionsSheet from '@/components/bangalore-buddy/DirectionsSheet'; // Import the new sheet
+import DirectionsSheet from '@/components/bangalore-buddy/DirectionsSheet';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,7 +132,6 @@ export default function HomePage() {
     fetchData();
   }, [fetchData]);
 
-  // Effect to calculate initial Home-to-Work route for the map
   useEffect(() => {
     if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib) {
       const fetchRoute = async () => {
@@ -253,21 +252,57 @@ export default function HomePage() {
     }
     
     setSelectedSheetDestinationName(destination.name);
-    setIsDirectionsSheetOpen(true); // Open sheet immediately, show loading state inside if needed
-    setTransitSheetDirections(null); // Clear previous directions
+    setIsDirectionsSheetOpen(true);
+    setTransitSheetDirections(null); 
 
-    // Fetch driving directions for the map
     const drivingRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
     setActiveMapRoute(drivingRoute);
 
-    // Fetch transit directions for the sheet
     const transitRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
     if (transitRoute) {
       setTransitSheetDirections(transitRoute);
     } else {
       toast({ title: "No Transit Route", description: `Could not find public transit directions to ${destination.name}.`, variant: "destructive"});
-      // Optionally keep the sheet open with a message or close it
-      // setIsDirectionsSheetOpen(false); 
+    }
+  };
+
+  const handleShowHomeToWorkTransit = async () => {
+    if (!friendHomeLocation || !friendWorkLocation || !mapsRoutesLib) {
+      toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
+      return;
+    }
+    setSelectedSheetDestinationName(friendWorkLocation.name || "Friend's Work");
+    setIsDirectionsSheetOpen(true);
+    setTransitSheetDirections(null);
+
+    const drivingRoute = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+    setActiveMapRoute(drivingRoute);
+
+    const transitRoute = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
+    if (transitRoute) {
+      setTransitSheetDirections(transitRoute);
+    } else {
+      toast({ title: "No Transit Route", description: `Could not find public transit from Home to ${friendWorkLocation.name || "Work"}.`, variant: "destructive"});
+    }
+  };
+
+  const handleShowWorkToHomeTransit = async () => {
+    if (!friendHomeLocation || !friendWorkLocation || !mapsRoutesLib) {
+      toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
+      return;
+    }
+    setSelectedSheetDestinationName(friendHomeLocation.name || "Friend's Home");
+    setIsDirectionsSheetOpen(true);
+    setTransitSheetDirections(null);
+
+    const drivingRoute = await getDirections(friendWorkLocation.position, friendHomeLocation.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+    setActiveMapRoute(drivingRoute);
+
+    const transitRoute = await getDirections(friendWorkLocation.position, friendHomeLocation.position, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
+    if (transitRoute) {
+      setTransitSheetDirections(transitRoute);
+    } else {
+      toast({ title: "No Transit Route", description: `Could not find public transit from Work to ${friendHomeLocation.name || "Home"}.`, variant: "destructive"});
     }
   };
 
@@ -335,7 +370,7 @@ export default function HomePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
-              <CardDescription>Set your friend's primary residential address. This is used for AI recommendations and routing.</CardDescription>
+              <CardDescription>Set your friend's primary residential address. Used for AI recommendations and routing.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...homeForm}>
@@ -359,6 +394,18 @@ export default function HomePage() {
                   </Button>
                 </form>
               </Form>
+              {friendHomeLocation && friendWorkLocation && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleShowWorkToHomeTransit} 
+                  disabled={!mapsRoutesLib}
+                  className="mt-2 w-full flex items-center"
+                >
+                  <RouteIcon className="mr-2 h-4 w-4" />
+                  Show Transit from Work
+                </Button>
+              )}
             </CardContent>
           </Card>
 
@@ -389,6 +436,18 @@ export default function HomePage() {
                   </Button>
                 </form>
               </Form>
+              {friendHomeLocation && friendWorkLocation && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleShowHomeToWorkTransit} 
+                  disabled={!mapsRoutesLib}
+                  className="mt-2 w-full flex items-center"
+                >
+                  <RouteIcon className="mr-2 h-4 w-4" />
+                  Show Transit from Home
+                </Button>
+              )}
             </CardContent>
           </Card>
 
@@ -425,7 +484,7 @@ export default function HomePage() {
             locations={otherPinnedLocations} 
             friendLocationSet={!!friendHomeLocation}
             onDeleteLocation={handleDeleteOtherPlace} 
-            onShowDirections={handleShowTransitDirections} // Pass the new handler
+            onShowDirections={handleShowTransitDirections}
             showDeleteButton={true} 
           />
           
@@ -438,7 +497,7 @@ export default function HomePage() {
             friendLocation={friendHomeLocation}
             workLocation={friendWorkLocation} 
             pinnedLocations={otherPinnedLocations}
-            route={activeMapRoute} // Pass the activeMapRoute to the map
+            route={activeMapRoute}
           />
         </div>
       </main>

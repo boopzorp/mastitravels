@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: var(--font-open-sans), Arial, Helvetica, sans-serif; /* Updated to use Open Sans */
+  font-family: var(--font-jua), Arial, Helvetica, sans-serif; /* Updated to use Jua */
 }
 
 @layer base {
@@ -33,7 +33,7 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --font-open-sans: "Open Sans"; /* Updated font variable definition */
+    --font-jua: "Jua"; /* Updated font variable definition */
 
     /* Sidebar variables, adjusted for consistency but may not be heavily used */
     --sidebar-background: 210 40% 96%; /* Slightly off-white for sidebar */

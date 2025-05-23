@@ -21,7 +21,7 @@ interface MapComponentProps {
 
 const MapComponent: FC<MapComponentProps> = ({ 
   center, 
-  zoom = 12, 
+  zoom = 13, // Default zoom increased to 13
   friendLocation, 
   workLocation,
   pinnedLocations,
@@ -40,10 +40,10 @@ const MapComponent: FC<MapComponentProps> = ({
     // Initialize or update DirectionsRenderer
     if (!directionsRendererRef.current) {
       directionsRendererRef.current = new mapsRoutesLib.DirectionsRenderer({
-        suppressMarkers: true, // We use our custom AdvancedMarkers
-        preserveViewport: false, // Allows renderer to set viewport to fit the route
+        suppressMarkers: true, 
+        preserveViewport: false, 
         polylineOptions: {
-          strokeColor: 'hsl(var(--primary))', // Use primary color from theme
+          strokeColor: 'hsl(200, 70%, 80%)', // Pastel blue color for the route
           strokeOpacity: 0.8,
           strokeWeight: 6,
         }
@@ -57,10 +57,10 @@ const MapComponent: FC<MapComponentProps> = ({
     } else {
       // Clear the route if it's null
       directionsRendererRef.current.setDirections(undefined);
-       // Optionally, reset map to center on home or default if no route and home exists
+      // Reset map to center on home or default if no route and home exists
       if (friendLocation) {
         map.setCenter(friendLocation.position);
-        map.setZoom(zoom); // Reset to default zoom when no route
+        map.setZoom(zoom); 
       } else {
         map.setCenter(center);
         map.setZoom(zoom);
@@ -73,15 +73,15 @@ const MapComponent: FC<MapComponentProps> = ({
         directionsRendererRef.current.setMap(null);
       }
     };
-  }, [map, mapsRoutesLib, route, friendLocation, center, zoom]);
+  }, [map, mapsRoutesLib, route, friendLocation, workLocation, center, zoom]); // workLocation added to dependencies
 
 
   return (
     <div className="w-full h-full min-h-[300px] md:min-h-0 rounded-lg overflow-hidden shadow-xl">
       <Map
-        mapId={customMapId || undefined} // Use custom Map ID or undefined for default
-        center={center} // Center will be overridden by DirectionsRenderer if route is shown
-        zoom={zoom}     // Zoom will be overridden by DirectionsRenderer if route is shown
+        mapId={customMapId || undefined} 
+        center={center} 
+        zoom={zoom}     
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         onClick={onMapClick}

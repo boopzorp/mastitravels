@@ -1,7 +1,7 @@
 // src/components/bangalore-buddy/AddLocationDialog.tsx
 "use client";
 
-import type { FC } from 'react';
+import { useEffect, type FC } from 'react'; // Changed this line
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,7 +48,7 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
   };
   
   // Effect to reset form when dialog is closed externally OR after successful save (handled by onOpenChange)
-  React.useEffect(() => {
+  useEffect(() => { // Changed this line
     if (!open) {
       form.reset();
     }

@@ -19,14 +19,14 @@ interface DirectionsSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   directions: google.maps.DirectionsResult | null;
-  destinationName: string;
+  title: string; // Changed from destinationName
 }
 
 const DirectionsSheet: FC<DirectionsSheetProps> = ({ 
   isOpen, 
   onOpenChange, 
   directions, 
-  destinationName 
+  title // Changed from destinationName
 }) => {
 
   const renderStepIcon = (travelMode?: google.maps.TravelMode, transitDetails?: google.maps.TransitDetails) => {
@@ -53,7 +53,7 @@ const DirectionsSheet: FC<DirectionsSheetProps> = ({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col" side="right">
         <SheetHeader className="pb-4 border-b">
-          <SheetTitle className="text-xl">Public Transport to {destinationName}</SheetTitle>
+          <SheetTitle className="text-xl">{title}</SheetTitle> 
           {directions?.routes[0]?.warnings && directions.routes[0].warnings.length > 0 && (
              <SheetDescription className="text-xs text-orange-600">
                 {directions.routes[0].warnings.join('; ')}

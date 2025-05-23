@@ -8,15 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { List, Trash2, Route as RouteIcon } from 'lucide-react'; // Added RouteIcon
-import MapPin from './MapPin'; // Using MapPin for consistent visual representation
+import { List, Trash2, Route as RouteIcon, Home } from 'lucide-react'; 
+import MapPin from './MapPin'; 
 
 interface PinnedLocationsListProps {
   locations: PinnedLocation[];
   friendLocationSet: boolean;
-  onDeleteLocation?: (id: string) => void; // Optional delete handler
-  onShowDirections?: (location: PinnedLocation) => void; // New prop for showing directions
-  showDeleteButton?: boolean; // To conditionally show delete button
+  onDeleteLocation?: (id: string) => void; 
+  onShowDirections?: (location: PinnedLocation, direction: 'toLocation' | 'fromLocation') => void; 
+  showDeleteButton?: boolean; 
 }
 
 const PinnedLocationsList: FC<PinnedLocationsListProps> = ({ 
@@ -49,7 +49,7 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
           <List className="text-primary" />
           Other Pinned Places
         </CardTitle>
-        <CardDescription>Your saved spots. Click the route icon for transit directions from home.</CardDescription>
+        <CardDescription>Your saved spots. Click icons for transit directions.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[200px] pr-3"> {/* Max height and scroll */}
@@ -73,16 +73,29 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
                     )}
                     <div className="flex items-center space-x-1">
                       {onShowDirections && friendLocationSet && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary hover:bg-primary/10 h-auto p-1"
-                          onClick={() => onShowDirections(location)}
-                          aria-label={`Get directions to ${location.name}`}
-                          title="Get Directions"
-                        >
-                          <RouteIcon size={18} />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:text-primary hover:bg-primary/10 h-auto p-1"
+                            onClick={() => onShowDirections(location, 'toLocation')}
+                            aria-label={`Get directions from Home to ${location.name}`}
+                            title="Directions from Home"
+                          >
+                            <RouteIcon size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:text-primary hover:bg-primary/10 h-auto p-1"
+                            onClick={() => onShowDirections(location, 'fromLocation')}
+                            aria-label={`Get directions from ${location.name} to Home`}
+                            title="Directions to Home"
+                          >
+                            <Home size={16} className="mr-1"/> 
+                            <RouteIcon size={18} style={{transform: 'scaleX(-1)'}} />
+                          </Button>
+                        </>
                       )}
                       {showDeleteButton && onDeleteLocation && (
                         <Button 
@@ -108,4 +121,3 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
 };
 
 export default PinnedLocationsList;
-

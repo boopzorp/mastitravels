@@ -63,7 +63,7 @@ export default function HomePage() {
   const [activeMapRoute, setActiveMapRoute] = useState<google.maps.DirectionsResult | null>(null);
   const [transitSheetDirections, setTransitSheetDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [isDirectionsSheetOpen, setIsDirectionsSheetOpen] = useState(false);
-  const [selectedSheetDestinationName, setSelectedSheetDestinationName] = useState<string>("");
+  const [directionsSheetTitle, setDirectionsSheetTitle] = useState<string>("");
   
   const [isAiLoading, setIsAiLoading] = useState(false); 
   const [isHomeSaving, setIsHomeSaving] = useState(false);
@@ -267,33 +267,51 @@ export default function HomePage() {
     }
   };
 
-  const handleShowTransitDirections = async (destination: PinnedLocation) => {
+  const handleShowTransitDirections = async (
+    location: PinnedLocation, 
+    direction: 'toLocation' | 'fromLocation'
+  ) => {
     if (!friendHomeLocation || !mapsRoutesLib) {
       toast({ title: "Missing Home Location", description: "Please set amor's home address first.", variant: "destructive" });
       return;
     }
+
+    let origin: LatLng;
+    let destination: LatLng;
+    let title: string;
+
+    if (direction === 'toLocation') {
+      origin = friendHomeLocation.position;
+      destination = location.position;
+      title = `Public Transport to ${location.name}`;
+    } else { // fromLocation
+      origin = location.position;
+      destination = friendHomeLocation.position;
+      title = `Public Transport from ${location.name} to Home`;
+    }
     
-    setSelectedSheetDestinationName(destination.name);
+    setDirectionsSheetTitle(title);
     setIsDirectionsSheetOpen(true);
     setTransitSheetDirections(null); 
 
-    const drivingRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+    const drivingRoute = await getDirections(origin, destination, mapsRoutesLib, google.maps.TravelMode.DRIVING);
     setActiveMapRoute(drivingRoute);
 
-    const transitRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
+    const transitRoute = await getDirections(origin, destination, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
     if (transitRoute) {
       setTransitSheetDirections(transitRoute);
     } else {
-      toast({ title: "No Transit Route", description: `Could not find public transit directions to ${destination.name}.`, variant: "destructive"});
+      toast({ title: "No Transit Route", description: `Could not find public transit directions for this route.`, variant: "destructive"});
     }
   };
+
 
   const handleShowHomeToWorkTransit = async () => {
     if (!friendHomeLocation || !friendWorkLocation || !mapsRoutesLib) {
       toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
       return;
     }
-    setSelectedSheetDestinationName(friendWorkLocation.name || "Amor's Work");
+    setDirectionsSheetTitle(`Public Transport from Home to ${friendWorkLocation.name || "Amor's Work"}`);
     setIsDirectionsSheetOpen(true);
     setTransitSheetDirections(null);
 
@@ -313,7 +331,7 @@ export default function HomePage() {
       toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
       return;
     }
-    setSelectedSheetDestinationName(friendHomeLocation.name || "Amor's Home");
+    setDirectionsSheetTitle(`Public Transport from ${friendWorkLocation.name || "Amor's Work"} to Home`);
     setIsDirectionsSheetOpen(true);
     setTransitSheetDirections(null);
 
@@ -615,7 +633,7 @@ export default function HomePage() {
         isOpen={isDirectionsSheetOpen}
         onOpenChange={setIsDirectionsSheetOpen}
         directions={transitSheetDirections}
-        destinationName={selectedSheetDestinationName}
+        title={directionsSheetTitle}
       />
     </div>
   );

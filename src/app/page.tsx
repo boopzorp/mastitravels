@@ -356,17 +356,42 @@ export default function HomePage() {
         </h1>
       </header>
 
-      <main className="flex-grow grid md:grid-cols-3 gap-6 p-6">
-        <div className="md:col-span-1 flex flex-col space-y-6 overflow-y-auto 
-                        max-h-[calc(100vh-theme(spacing.32))] md:max-h-[calc(100vh-theme(spacing.24))] 
-                        scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
-          
+      {/* Main content area with responsive ordering */}
+      {/* Mobile: flex-col (Map, FindCoolSpots, Rest) */}
+      {/* Desktop: md:grid md:grid-cols-3 md:grid-rows-[auto_1fr] (Controls | Map) */}
+      <main className="flex-grow p-6 flex flex-col md:grid md:grid-cols-3 md:grid-rows-[auto_1fr] gap-6">
+        
+        {/* Block 1: Map */}
+        {/* Mobile: order-1 (first). Desktop: col 2/3, spans 2 rows. */}
+        <div className="order-1 md:order-none md:col-start-2 md:col-span-2 md:row-span-2 rounded-xl shadow-2xl overflow-hidden h-[50vh] md:h-full">
+          <MapComponent
+            center={mapCenter}
+            friendLocation={friendHomeLocation}
+            workLocation={friendWorkLocation}
+            pinnedLocations={otherPinnedLocations}
+            route={activeMapRoute}
+          />
+        </div>
+
+        {/* Block 2: Find Cool Spots (OriginalLocationForm) */}
+        {/* Mobile: order-2 (second). Desktop: col 1, row 1. */}
+        <div className="order-2 md:order-none md:col-start-1 md:col-span-1 md:row-start-1">
           <OriginalLocationForm 
             onSubmit={handleOriginalLocationFormSubmit} 
             isLoading={isAiLoading} 
             isFriendHomeSet={!!friendHomeLocation}
           />
+        </div>
 
+        {/* Block 3: Rest of the sections (Home, Work, Other Places, Lists) */}
+        {/* Mobile: order-3 (third), scrollable. Desktop: col 1, row 2, scrollable. */}
+        <div className="order-3 md:order-none md:col-start-1 md:col-span-1 md:row-start-2 
+                        flex flex-col space-y-6 
+                        flex-grow md:flex-grow-0 /* flex-grow for mobile to take remaining space */
+                        overflow-y-auto 
+                        md:max-h-full /* Desktop takes remaining grid cell height */
+                        scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
@@ -490,17 +515,8 @@ export default function HomePage() {
           
           <RecommendationsDisplay recommendations={aiRecommendations} isLoading={isAiLoading} />
         </div>
-
-        <div className="md:col-span-2 rounded-xl shadow-2xl overflow-hidden h-[50vh] md:h-auto">
-          <MapComponent
-            center={mapCenter}
-            friendLocation={friendHomeLocation}
-            workLocation={friendWorkLocation} 
-            pinnedLocations={otherPinnedLocations}
-            route={activeMapRoute}
-          />
-        </div>
       </main>
+
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
         Plan your MastiTravels!
       </footer>
@@ -513,4 +529,3 @@ export default function HomePage() {
     </div>
   );
 }
-

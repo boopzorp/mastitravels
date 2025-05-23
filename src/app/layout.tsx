@@ -35,8 +35,8 @@ export default function RootLayout({
     <html lang="en" className={`${gamjaFlower.variable}`}>
       <head>
         {/* You can add static meta tags here if needed, or manage dynamically in page.tsx files */}
-        <title>Bangalore Buddy</title>
-        <meta name="description" content="Find recommendations for your friend in Bangalore!" />
+        <title>MastiTravels</title>
+        <meta name="description" content="Plan your MastiTravels adventures!" />
       </head>
       <body className={`font-sans antialiased`}>
         <APIProvider apiKey={googleMapsApiKey || ""}>

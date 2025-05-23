@@ -341,7 +341,7 @@ export default function HomePage() {
     return (
       <div className="flex flex-col min-h-screen bg-background font-sans items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-lg text-muted-foreground">Loading locations from your Bangalore Buddy database...</p>
+        <p className="text-lg text-muted-foreground">Loading locations from your MastiTravels database...</p>
       </div>
     );
   }
@@ -351,7 +351,7 @@ export default function HomePage() {
       <header className="p-4 shadow-md bg-card border-b">
         <h1 className="text-3xl font-bold text-primary flex items-center justify-center">
           <Globe className="mr-3 h-8 w-8" />
-          Bangalore Buddy (Admin)
+          MastiTravels (Admin)
           <MapPinIcon className="ml-3 h-8 w-8" />
         </h1>
       </header>
@@ -502,7 +502,7 @@ export default function HomePage() {
         </div>
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
-        Built with <span className="text-destructive">&hearts;</span> for good friends in Bangalore.
+        Plan your MastiTravels!
       </footer>
       <DirectionsSheet 
         isOpen={isDirectionsSheetOpen}

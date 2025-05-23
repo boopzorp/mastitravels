@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2, Route as RouteIcon, LogOut } from 'lucide-react';
+import { Home, Briefcase, PlusCircle, Trash2, Route as RouteIcon, LogOut } from 'lucide-react';
 
 const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 };
 const LOCATIONS_COLLECTION = 'pinned_locations';
@@ -582,10 +582,8 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <header className="p-4 shadow-md bg-card border-b">
         <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-primary flex items-center">
-            <Globe className="mr-3 h-8 w-8" />
-            MastiTravels
-            <MapPinIcon className="ml-3 h-8 w-8" />
+          <h1 className="text-3xl font-bold text-primary">
+            mastitravels
           </h1>
           <Button variant="outline" onClick={logout} size="sm">
             <LogOut className="mr-2 h-4 w-4" /> Logout

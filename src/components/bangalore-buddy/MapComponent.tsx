@@ -32,6 +32,7 @@ const MapComponent: FC<MapComponentProps> = ({
   const map = useMap();
   const mapsRoutesLib = useMapsLibrary('routes');
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const customMapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
 
   useEffect(() => {
     if (!map || !mapsRoutesLib) return;
@@ -78,7 +79,7 @@ const MapComponent: FC<MapComponentProps> = ({
   return (
     <div className="w-full h-full min-h-[300px] md:min-h-0 rounded-lg overflow-hidden shadow-xl">
       <Map
-        mapId="bangalore-buddy-map"
+        mapId={customMapId || undefined} // Use custom Map ID or undefined for default
         center={center} // Center will be overridden by DirectionsRenderer if route is shown
         zoom={zoom}     // Zoom will be overridden by DirectionsRenderer if route is shown
         gestureHandling={'greedy'}

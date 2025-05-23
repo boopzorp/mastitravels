@@ -22,8 +22,8 @@ interface MapComponentProps {
 }
 
 const MapComponent: FC<MapComponentProps> = ({ 
-  center: defaultCenterProp, // Renaming for clarity, this is the initial/fallback center
-  zoom: defaultZoomProp = 13, // Renaming for clarity, this is the initial/fallback zoom
+  center: defaultCenterProp, 
+  zoom: defaultZoomProp = 13, 
   friendLocation, 
   workLocation,
   pinnedLocations,
@@ -62,7 +62,7 @@ const MapComponent: FC<MapComponentProps> = ({
     } else {
       // No route, so clear directions and set center based on available locations or default
       if (directionsRendererRef.current) {
-        directionsRendererRef.current.setDirections(undefined);
+        directionsRendererRef.current.setDirections(null); // Changed undefined to null
       }
       if (friendLocation) {
         map.setCenter(friendLocation.position);
@@ -78,19 +78,16 @@ const MapComponent: FC<MapComponentProps> = ({
     
     return () => {
       if (directionsRendererRef.current) {
-        // Do not setMap(null) here if renderer is managed by the map instance itself
-        // or if you want it to persist across component re-renders not affecting the map itself.
-        // For this app structure, it's generally fine to leave it associated or set to null on full unmount.
+        // directionsRendererRef.current.setMap(null); // Consider if needed on full unmount
       }
     };
-  // Dependencies should ensure this runs when map, route, or key locations change
   }, [map, mapsRoutesLib, route, friendLocation, workLocation, defaultCenterProp, defaultZoomProp]);
 
 
   const handleRecenterHome = () => {
     if (map && friendLocation) {
       map.setCenter(friendLocation.position);
-      map.setZoom(defaultZoomProp); // Use the default/initial zoom level
+      map.setZoom(defaultZoomProp); 
     }
   };
 
@@ -109,8 +106,8 @@ const MapComponent: FC<MapComponentProps> = ({
       )}
       <Map
         mapId={customMapId || undefined} 
-        defaultCenter={defaultCenterProp} // Use defaultCenter
-        defaultZoom={defaultZoomProp}     // Use defaultZoom
+        defaultCenter={defaultCenterProp}
+        defaultZoom={defaultZoomProp}    
         gestureHandling={'greedy'}
         disableDefaultUI={true}
         onClick={onMapClick}

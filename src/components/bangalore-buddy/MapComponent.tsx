@@ -7,6 +7,8 @@ import { Map, AdvancedMarker, useMap, useMapsLibrary } from '@vis.gl/react-googl
 import type { LatLng, PinnedLocation } from '@/lib/types';
 import { LocationCategory } from '@/lib/types';
 import MapPin from './MapPin';
+import { Button } from '@/components/ui/button';
+import { Home as HomeIcon } from 'lucide-react';
 
 interface MapComponentProps {
   center: LatLng;
@@ -16,7 +18,7 @@ interface MapComponentProps {
   pinnedLocations: PinnedLocation[];
   onMapClick?: (event: google.maps.MapMouseEvent) => void;
   selectedPinId?: string | null;
-  route?: google.maps.DirectionsResult | null; // New prop for the route
+  route?: google.maps.DirectionsResult | null;
 }
 
 const MapComponent: FC<MapComponentProps> = ({ 
@@ -37,11 +39,10 @@ const MapComponent: FC<MapComponentProps> = ({
   useEffect(() => {
     if (!map || !mapsRoutesLib) return;
 
-    // Initialize or update DirectionsRenderer
     if (!directionsRendererRef.current) {
       directionsRendererRef.current = new mapsRoutesLib.DirectionsRenderer({
         suppressMarkers: true, 
-        preserveViewport: true, // We will manually fit bounds
+        preserveViewport: true, 
         polylineOptions: {
           strokeColor: 'hsl(240, 100%, 50%)', 
           strokeOpacity: 0.8,
@@ -56,18 +57,16 @@ const MapComponent: FC<MapComponentProps> = ({
       directionsRendererRef.current.setDirections(route);
       const routeBounds = route.routes[0].bounds;
       if (routeBounds) {
-        map.fitBounds(routeBounds, 50); // Fit bounds with 50px padding
+        map.fitBounds(routeBounds, 50); 
       }
     } else {
-      // Clear the route if it's null
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setDirections(undefined);
       }
-      // Reset map to center on home or default if no route and home exists
       if (friendLocation) {
         map.setCenter(friendLocation.position);
         map.setZoom(zoom); 
-      } else if (workLocation && !friendLocation) { // Added case: center on work if home not set
+      } else if (workLocation && !friendLocation) { 
         map.setCenter(workLocation.position);
         map.setZoom(zoom);
       }
@@ -77,7 +76,6 @@ const MapComponent: FC<MapComponentProps> = ({
       }
     }
     
-    // Cleanup function to remove the directions display when component unmounts or map/route changes
     return () => {
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setMap(null);
@@ -85,9 +83,26 @@ const MapComponent: FC<MapComponentProps> = ({
     };
   }, [map, mapsRoutesLib, route, friendLocation, workLocation, center, zoom]);
 
+  const handleRecenterHome = () => {
+    if (map && friendLocation) {
+      map.setCenter(friendLocation.position);
+      map.setZoom(zoom);
+    }
+  };
 
   return (
-    <div className="w-full h-full min-h-[300px] md:min-h-0 rounded-lg overflow-hidden shadow-xl">
+    <div className="relative w-full h-full min-h-[300px] md:min-h-0 rounded-lg overflow-hidden shadow-xl">
+      {friendLocation && map && (
+        <Button
+          onClick={handleRecenterHome}
+          variant="outline"
+          size="icon"
+          className="absolute top-3 right-3 z-10 bg-background shadow-md hover:bg-secondary"
+          title="Recenter to Home"
+        >
+          <HomeIcon className="h-5 w-5" />
+        </Button>
+      )}
       <Map
         mapId={customMapId || undefined} 
         center={center} 

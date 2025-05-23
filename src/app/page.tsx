@@ -7,6 +7,8 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
+import { useRouter } from 'next/navigation'; // For redirection
+import { useAuth } from '@/context/AuthContext'; // Import useAuth
 
 
 import type { LatLng, PinnedLocation } from '@/lib/types';
@@ -28,7 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2, Route as RouteIcon } from 'lucide-react';
+import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2, Route as RouteIcon, LogOut } from 'lucide-react';
 
 const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 };
 const LOCATIONS_COLLECTION = 'pinned_locations';
@@ -49,6 +51,9 @@ const otherPlaceSchema = z.object({
 type OtherPlaceFormInput = z.infer<typeof otherPlaceSchema>;
 
 export default function HomePage() {
+  const { currentUser, logout, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
+
   const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_CENTER);
   const [friendHomeLocation, setFriendHomeLocation] = useState<PinnedLocation | null>(null);
   const [friendWorkLocation, setFriendWorkLocation] = useState<PinnedLocation | null>(null);
@@ -76,7 +81,15 @@ export default function HomePage() {
     defaultValues: { name: "", address: "", category: "", description: "" },
   });
 
+  useEffect(() => {
+    if (!isAuthLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isAuthLoading, router]);
+
+
   const fetchData = useCallback(async () => {
+    if (!currentUser) return; // Don't fetch if not logged in
     if (!db || !db.app?.options?.projectId) {
       toast({ title: "Database Error", description: "Firestore is not configured.", variant: "destructive" });
       setIsDataLoading(false);
@@ -91,10 +104,10 @@ export default function HomePage() {
         const homeLocation = { ...homeData, id: friendHomeDocSnap.id } as PinnedLocation;
         setFriendHomeLocation(homeLocation);
         setMapCenter(homeLocation.position); 
-        homeForm.setValue('address', homeData.address || "");
+        if (currentUser === 'admin') homeForm.setValue('address', homeData.address || "");
       } else {
         setFriendHomeLocation(null);
-        homeForm.reset({ address: "" });
+        if (currentUser === 'admin') homeForm.reset({ address: "" });
       }
 
       const friendWorkDocRef = doc(db, LOCATIONS_COLLECTION, FRIEND_WORK_DOC_ID);
@@ -102,10 +115,10 @@ export default function HomePage() {
       if (friendWorkDocSnap.exists()) {
         const workData = friendWorkDocSnap.data() as Omit<PinnedLocation, 'id' | 'distance'>;
         setFriendWorkLocation({ ...workData, id: friendWorkDocSnap.id } as PinnedLocation);
-        workForm.setValue('address', workData.address || "");
+        if (currentUser === 'admin') workForm.setValue('address', workData.address || "");
       } else {
         setFriendWorkLocation(null);
-        workForm.reset({ address: "" });
+        if (currentUser === 'admin') workForm.reset({ address: "" });
       }
 
       const q = query(collection(db, LOCATIONS_COLLECTION), 
@@ -126,11 +139,13 @@ export default function HomePage() {
     } finally {
       setIsDataLoading(false);
     }
-  }, [toast, homeForm, workForm]);
+  }, [toast, homeForm, workForm, currentUser]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (currentUser) { // Only fetch data if a user is logged in
+        fetchData();
+    }
+  }, [fetchData, currentUser]);
 
   useEffect(() => {
     if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib) {
@@ -329,6 +344,15 @@ export default function HomePage() {
   }, [friendHomeLocation, friendWorkLocation?.position.lat, friendWorkLocation?.position.lng, otherPinnedLocations.length]);
 
 
+  if (isAuthLoading || (!currentUser && !isAuthLoading)) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background font-sans items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-lg text-muted-foreground">Loading MastiTravels...</p>
+      </div>
+    );
+  }
+
   if (isDataLoading && (!db || !db.app?.options?.projectId)) {
      return (
         <div className="flex flex-col min-h-screen bg-background font-sans items-center justify-center p-4">
@@ -346,23 +370,225 @@ export default function HomePage() {
     );
   }
 
+  const renderAdminView = () => (
+    <>
+      {/* Block 2: Find Cool Spots (OriginalLocationForm) */}
+      <div className="order-2 md:order-none md:col-start-1 md:col-span-1 md:row-start-1">
+        <OriginalLocationForm 
+          onSubmit={handleOriginalLocationFormSubmit} 
+          isLoading={isAiLoading} 
+          isFriendHomeSet={!!friendHomeLocation}
+        />
+      </div>
+
+      {/* Block 3: Rest of the sections (Home, Work, Other Places, Lists) */}
+      <div className="order-3 md:order-none md:col-start-1 md:col-span-1 md:row-start-2 
+                      flex flex-col space-y-6 
+                      flex-grow md:flex-grow-0
+                      overflow-y-auto 
+                      md:max-h-full 
+                      scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
+            <CardDescription>Set your friend's primary residential address. Used for AI recommendations and routing.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...homeForm}>
+              <form onSubmit={homeForm.handleSubmit(handleSaveHomeLocation)} className="space-y-4">
+                <FormField
+                  control={homeForm.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Home Address</FormLabel>
+                      <FormControl>
+                        <AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Enter home address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isHomeSaving} className="w-full">
+                  {isHomeSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
+                  Save Home
+                </Button>
+              </form>
+            </Form>
+            {friendHomeLocation && friendWorkLocation && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleShowWorkToHomeTransit} 
+                disabled={!mapsRoutesLib}
+                className="mt-2 w-full flex items-center"
+              >
+                <RouteIcon className="mr-2 h-4 w-4" />
+                Show Transit from Work
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Friend's Work</CardTitle>
+            <CardDescription>Set your friend's workplace address for routing.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...workForm}>
+              <form onSubmit={workForm.handleSubmit(handleSaveWorkLocation)} className="space-y-4">
+                <FormField
+                  control={workForm.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Work Address</FormLabel>
+                      <FormControl>
+                        <AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Enter work address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isWorkSaving} className="w-full">
+                   {isWorkSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
+                  Save Work
+                </Button>
+              </form>
+            </Form>
+            {friendHomeLocation && friendWorkLocation && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleShowHomeToWorkTransit} 
+                disabled={!mapsRoutesLib}
+                className="mt-2 w-full flex items-center"
+              >
+                <RouteIcon className="mr-2 h-4 w-4" />
+                Show Transit from Home
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><PlusCircle className="mr-2 h-5 w-5 text-primary" /> Add Other Places</CardTitle>
+            <CardDescription>Pin other locations like cafes, parks, museums, etc.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...otherPlaceForm}>
+              <form onSubmit={otherPlaceForm.handleSubmit(handleAddOtherPlace)} className="space-y-4">
+                <FormField control={otherPlaceForm.control} name="name" render={({ field }) => (
+                  <FormItem><FormLabel>Place Name</FormLabel><FormControl><Input placeholder="e.g., Corner House Ice Cream" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={otherPlaceForm.control} name="address" render={({ field }) => (
+                  <FormItem><FormLabel>Address</FormLabel><FormControl><AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Place address" /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={otherPlaceForm.control} name="category" render={({ field }) => (
+                  <FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="e.g., Cafe, Park, Museum" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={otherPlaceForm.control} name="description" render={({ field }) => (
+                  <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Notes about this place" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <Button type="submit" disabled={isOtherPlaceSaving} className="w-full">
+                  {isOtherPlaceSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
+                  Add Place
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+        
+        <PinnedLocationsList 
+          locations={otherPinnedLocations} 
+          friendLocationSet={!!friendHomeLocation}
+          onDeleteLocation={handleDeleteOtherPlace} 
+          onShowDirections={handleShowTransitDirections}
+          showDeleteButton={true} 
+        />
+        
+        <RecommendationsDisplay recommendations={aiRecommendations} isLoading={isAiLoading} />
+      </div>
+    </>
+  );
+
+  const renderFriendView = () => (
+    <>
+        {/* Block 2 & 3 combined for Friend view (simplified) */}
+        <div className="order-2 md:order-none md:col-start-1 md:col-span-1 md:row-start-1 md:row-span-2
+                        flex flex-col space-y-6 
+                        flex-grow md:flex-grow-0
+                        overflow-y-auto 
+                        md:max-h-full 
+                        scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome, Friend!</CardTitle>
+              <CardDescription>Here are some places and routes picked out for you.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>Friend view is under construction. You'll soon see your map and places here!</p>
+               {friendHomeLocation && friendWorkLocation && (
+                <div className="mt-4 space-y-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleShowHomeToWorkTransit} 
+                    disabled={!mapsRoutesLib}
+                    className="w-full flex items-center"
+                  >
+                    <RouteIcon className="mr-2 h-4 w-4" />
+                    Show Transit: Home to Work
+                  </Button>
+                   <Button 
+                    variant="outline" 
+                    onClick={handleShowWorkToHomeTransit} 
+                    disabled={!mapsRoutesLib}
+                    className="w-full flex items-center"
+                  >
+                    <RouteIcon className="mr-2 h-4 w-4" />
+                    Show Transit: Work to Home
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <PinnedLocationsList 
+            locations={otherPinnedLocations} 
+            friendLocationSet={!!friendHomeLocation}
+            // onDeleteLocation={handleDeleteOtherPlace} // Friends cannot delete
+            onShowDirections={handleShowTransitDirections}
+            showDeleteButton={false} // Friends cannot delete
+          />
+          
+          {/* Placeholder for friend's AI interaction */}
+          {/* <RecommendationsDisplay recommendations={aiRecommendations} isLoading={isAiLoading} /> */}
+        </div>
+    </>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-background font-sans">
       <header className="p-4 shadow-md bg-card border-b">
-        <h1 className="text-3xl font-bold text-primary flex items-center justify-center">
-          <Globe className="mr-3 h-8 w-8" />
-          MastiTravels (Admin)
-          <MapPinIcon className="ml-3 h-8 w-8" />
-        </h1>
+        <div className="container mx-auto flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-primary flex items-center">
+            <Globe className="mr-3 h-8 w-8" />
+            MastiTravels {currentUser === 'admin' ? '(Admin)' : '(Friend View)'}
+            <MapPinIcon className="ml-3 h-8 w-8" />
+          </h1>
+          <Button variant="outline" onClick={logout} size="sm">
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
+        </div>
       </header>
 
-      {/* Main content area with responsive ordering */}
-      {/* Mobile: flex-col (Map, FindCoolSpots, Rest) */}
-      {/* Desktop: md:grid md:grid-cols-3 md:grid-rows-[auto_1fr] (Controls | Map) */}
-      <main className="flex-grow p-6 flex flex-col md:grid md:grid-cols-3 md:grid-rows-[auto_1fr] gap-6">
+      <main className="flex-grow p-6 flex flex-col md:grid md:grid-cols-3 md:grid-rows-[auto_1fr] gap-6 container mx-auto">
         
         {/* Block 1: Map */}
-        {/* Mobile: order-1 (first). Desktop: col 2/3, spans 2 rows. */}
         <div className="order-1 md:order-none md:col-start-2 md:col-span-2 md:row-span-2 rounded-xl shadow-2xl overflow-hidden h-[50vh] md:h-full">
           <MapComponent
             center={mapCenter}
@@ -373,148 +599,8 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Block 2: Find Cool Spots (OriginalLocationForm) */}
-        {/* Mobile: order-2 (second). Desktop: col 1, row 1. */}
-        <div className="order-2 md:order-none md:col-start-1 md:col-span-1 md:row-start-1">
-          <OriginalLocationForm 
-            onSubmit={handleOriginalLocationFormSubmit} 
-            isLoading={isAiLoading} 
-            isFriendHomeSet={!!friendHomeLocation}
-          />
-        </div>
-
-        {/* Block 3: Rest of the sections (Home, Work, Other Places, Lists) */}
-        {/* Mobile: order-3 (third), scrollable. Desktop: col 1, row 2, scrollable. */}
-        <div className="order-3 md:order-none md:col-start-1 md:col-span-1 md:row-start-2 
-                        flex flex-col space-y-6 
-                        flex-grow md:flex-grow-0 /* flex-grow for mobile to take remaining space */
-                        overflow-y-auto 
-                        md:max-h-full /* Desktop takes remaining grid cell height */
-                        scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
-              <CardDescription>Set your friend's primary residential address. Used for AI recommendations and routing.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...homeForm}>
-                <form onSubmit={homeForm.handleSubmit(handleSaveHomeLocation)} className="space-y-4">
-                  <FormField
-                    control={homeForm.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Home Address</FormLabel>
-                        <FormControl>
-                          <AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Enter home address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={isHomeSaving} className="w-full">
-                    {isHomeSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
-                    Save Home
-                  </Button>
-                </form>
-              </Form>
-              {friendHomeLocation && friendWorkLocation && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleShowWorkToHomeTransit} 
-                  disabled={!mapsRoutesLib}
-                  className="mt-2 w-full flex items-center"
-                >
-                  <RouteIcon className="mr-2 h-4 w-4" />
-                  Show Transit from Work
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Friend's Work</CardTitle>
-              <CardDescription>Set your friend's workplace address for routing.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...workForm}>
-                <form onSubmit={workForm.handleSubmit(handleSaveWorkLocation)} className="space-y-4">
-                  <FormField
-                    control={workForm.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Work Address</FormLabel>
-                        <FormControl>
-                          <AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Enter work address" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={isWorkSaving} className="w-full">
-                     {isWorkSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
-                    Save Work
-                  </Button>
-                </form>
-              </Form>
-              {friendHomeLocation && friendWorkLocation && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleShowHomeToWorkTransit} 
-                  disabled={!mapsRoutesLib}
-                  className="mt-2 w-full flex items-center"
-                >
-                  <RouteIcon className="mr-2 h-4 w-4" />
-                  Show Transit from Home
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center"><PlusCircle className="mr-2 h-5 w-5 text-primary" /> Add Other Places</CardTitle>
-              <CardDescription>Pin other locations like cafes, parks, museums, etc.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...otherPlaceForm}>
-                <form onSubmit={otherPlaceForm.handleSubmit(handleAddOtherPlace)} className="space-y-4">
-                  <FormField control={otherPlaceForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Place Name</FormLabel><FormControl><Input placeholder="e.g., Corner House Ice Cream" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={otherPlaceForm.control} name="address" render={({ field }) => (
-                    <FormItem><FormLabel>Address</FormLabel><FormControl><AddressAutocompleteInput value={field.value} onChange={field.onChange} placeholder="Place address" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={otherPlaceForm.control} name="category" render={({ field }) => (
-                    <FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="e.g., Cafe, Park, Museum" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={otherPlaceForm.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Notes about this place" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <Button type="submit" disabled={isOtherPlaceSaving} className="w-full">
-                    {isOtherPlaceSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div> : null}
-                    Add Place
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-          
-          <PinnedLocationsList 
-            locations={otherPinnedLocations} 
-            friendLocationSet={!!friendHomeLocation}
-            onDeleteLocation={handleDeleteOtherPlace} 
-            onShowDirections={handleShowTransitDirections}
-            showDeleteButton={true} 
-          />
-          
-          <RecommendationsDisplay recommendations={aiRecommendations} isLoading={isAiLoading} />
-        </div>
+        {currentUser === 'admin' ? renderAdminView() : renderFriendView()}
+        
       </main>
 
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">

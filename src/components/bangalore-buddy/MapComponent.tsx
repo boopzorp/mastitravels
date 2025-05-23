@@ -41,9 +41,9 @@ const MapComponent: FC<MapComponentProps> = ({
     if (!directionsRendererRef.current) {
       directionsRendererRef.current = new mapsRoutesLib.DirectionsRenderer({
         suppressMarkers: true, 
-        preserveViewport: false, 
+        preserveViewport: false, // This ensures the route is focused by adjusting viewport
         polylineOptions: {
-          strokeColor: 'hsl(200, 70%, 80%)', // Pastel blue color for the route
+          strokeColor: 'hsl(240, 100%, 50%)', // Changed to standard blue
           strokeOpacity: 0.8,
           strokeWeight: 6,
         }
@@ -73,7 +73,7 @@ const MapComponent: FC<MapComponentProps> = ({
         directionsRendererRef.current.setMap(null);
       }
     };
-  }, [map, mapsRoutesLib, route, friendLocation, workLocation, center, zoom]); // workLocation added to dependencies
+  }, [map, mapsRoutesLib, route, friendLocation, workLocation, center, zoom]);
 
 
   return (

@@ -24,7 +24,7 @@ const addLocationSchema = z.object({
 export type AddLocationFormInput = z.infer<typeof addLocationSchema>;
 
 interface AddLocationDialogProps {
-  onSave: (data: AddLocationFormInput) => Promise<void>;
+  onSave: (data: AddLocationFormInput) => Promise<void>; // Changed to Promise<void> as form reset is handled in parent
   isLoading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,20 +36,30 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
     defaultValues: {
       name: "",
       description: "",
-      category: LocationCategory.EXPLORATION,
+      category: LocationCategory.EXPLORATION, // Default to exploration for new pins
       address: "",
     },
   });
 
   const handleFormSubmit: SubmitHandler<AddLocationFormInput> = async (data) => {
-    await onSave(data);
-    if (!isLoading) { // Only reset and close if not still loading (e.g. error didn't occur)
+    await onSave(data); // Parent will handle closing and resetting if successful
+    // No longer resetting form here, parent (HomePage) will reset if needed or handle dialog close.
+    // This ensures form isn't reset if there's a save error and dialog remains open.
+  };
+  
+  // Effect to reset form when dialog is closed externally OR after successful save (handled by onOpenChange)
+  React.useEffect(() => {
+    if (!open) {
       form.reset();
     }
-  };
+  }, [open, form]);
+
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) form.reset(); // Reset form when dialog is closed
+      }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
           <Pin className="mr-2 h-4 w-4" /> Add New Pin
@@ -96,14 +106,17 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value as LocationCategoryType)} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {DefaultLocationCategories.map((cat) => (
+                      {DefaultLocationCategories.filter(cat => cat !== LocationCategory.FRIEND).map((cat) => ( // Exclude Friend category here
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>

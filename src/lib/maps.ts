@@ -42,7 +42,8 @@ export function calculateDistance(pos1: LatLng, pos2: LatLng): string {
 export async function getDirections(
   origin: LatLng,
   destination: LatLng,
-  mapsRoutesLib: typeof google.maps.routes // Pass the library
+  mapsRoutesLib: typeof google.maps.routes, // Pass the library
+  travelMode: google.maps.TravelMode = google.maps.TravelMode.DRIVING // Add travelMode parameter
 ): Promise<google.maps.DirectionsResult | null> {
   if (!mapsRoutesLib) {
     console.error("Google Maps Routes library not available for directions.");
@@ -53,7 +54,7 @@ export async function getDirections(
     const request: google.maps.DirectionsRequest = {
       origin: new google.maps.LatLng(origin.lat, origin.lng),
       destination: new google.maps.LatLng(destination.lat, destination.lng),
-      travelMode: google.maps.TravelMode.DRIVING, // You can make this configurable
+      travelMode: travelMode, // Use the provided travelMode
     };
     return new Promise((resolve, reject) => {
       directionsService.route(request, (result, status) => {
@@ -70,3 +71,4 @@ export async function getDirections(
     return null;
   }
 }
+

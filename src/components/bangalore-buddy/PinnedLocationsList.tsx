@@ -8,13 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { List, Trash2 } from 'lucide-react';
+import { List, Trash2, Route as RouteIcon } from 'lucide-react'; // Added RouteIcon
 import MapPin from './MapPin'; // Using MapPin for consistent visual representation
 
 interface PinnedLocationsListProps {
   locations: PinnedLocation[];
   friendLocationSet: boolean;
   onDeleteLocation?: (id: string) => void; // Optional delete handler
+  onShowDirections?: (location: PinnedLocation) => void; // New prop for showing directions
   showDeleteButton?: boolean; // To conditionally show delete button
 }
 
@@ -22,6 +23,7 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
   locations, 
   friendLocationSet, 
   onDeleteLocation,
+  onShowDirections,
   showDeleteButton = false 
 }) => {
   if (locations.length === 0) {
@@ -47,7 +49,7 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
           <List className="text-primary" />
           Other Pinned Places
         </CardTitle>
-        <CardDescription>Your saved spots and their distance from your friend's home (if set).</CardDescription>
+        <CardDescription>Your saved spots. Click the route icon for transit directions from home.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[200px] pr-3"> {/* Max height and scroll */}
@@ -56,7 +58,6 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
               <li key={location.id} className="p-3 border rounded-md hover:bg-secondary/50 transition-colors">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    {/* Ensure category is passed as a string */}
                     <MapPin category={location.category} />
                   </div>
                   <div className="flex-grow">
@@ -70,17 +71,31 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
                         {location.distance}
                       </div>
                     )}
-                    {showDeleteButton && onDeleteLocation && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-auto p-1"
-                        onClick={() => onDeleteLocation(location.id)}
-                        aria-label={`Delete ${location.name}`}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    )}
+                    <div className="flex items-center space-x-1">
+                      {onShowDirections && friendLocationSet && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary hover:bg-primary/10 h-auto p-1"
+                          onClick={() => onShowDirections(location)}
+                          aria-label={`Get directions to ${location.name}`}
+                          title="Get Directions"
+                        >
+                          <RouteIcon size={18} />
+                        </Button>
+                      )}
+                      {showDeleteButton && onDeleteLocation && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-auto p-1"
+                          onClick={() => onDeleteLocation(location.id)}
+                          aria-label={`Delete ${location.name}`}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>
@@ -93,3 +108,4 @@ const PinnedLocationsList: FC<PinnedLocationsListProps> = ({
 };
 
 export default PinnedLocationsList;
+

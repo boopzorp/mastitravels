@@ -1,5 +1,4 @@
 
-
 // src/app/page.tsx
 "use client";
 
@@ -22,13 +21,14 @@ import OriginalLocationForm, { type LocationFormInput as OriginalLocationFormInp
 import AddressAutocompleteInput from '@/components/bangalore-buddy/AddressAutocompleteInput';
 import PinnedLocationsList from '@/components/bangalore-buddy/PinnedLocationsList';
 import RecommendationsDisplay from '@/components/bangalore-buddy/RecommendationsDisplay';
+import DirectionsSheet from '@/components/bangalore-buddy/DirectionsSheet'; // Import the new sheet
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2 } from 'lucide-react';
+import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2, Route as RouteIcon } from 'lucide-react';
 
 const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 };
 const LOCATIONS_COLLECTION = 'pinned_locations';
@@ -54,7 +54,11 @@ export default function HomePage() {
   const [friendWorkLocation, setFriendWorkLocation] = useState<PinnedLocation | null>(null);
   const [otherPinnedLocations, setOtherPinnedLocations] = useState<PinnedLocation[]>([]);
   const [aiRecommendations, setAiRecommendations] = useState<string | null>(null);
-  const [homeToWorkRoute, setHomeToWorkRoute] = useState<google.maps.DirectionsResult | null>(null);
+  
+  const [activeMapRoute, setActiveMapRoute] = useState<google.maps.DirectionsResult | null>(null);
+  const [transitSheetDirections, setTransitSheetDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [isDirectionsSheetOpen, setIsDirectionsSheetOpen] = useState(false);
+  const [selectedSheetDestinationName, setSelectedSheetDestinationName] = useState<string>("");
   
   const [isAiLoading, setIsAiLoading] = useState(false); 
   const [isHomeSaving, setIsHomeSaving] = useState(false);
@@ -128,15 +132,16 @@ export default function HomePage() {
     fetchData();
   }, [fetchData]);
 
+  // Effect to calculate initial Home-to-Work route for the map
   useEffect(() => {
     if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib) {
       const fetchRoute = async () => {
-        const routeResult = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib);
-        setHomeToWorkRoute(routeResult);
+        const routeResult = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+        setActiveMapRoute(routeResult);
       };
       fetchRoute();
     } else {
-      setHomeToWorkRoute(null); // Clear route if locations or library are not available
+      setActiveMapRoute(null); 
     }
   }, [friendHomeLocation?.position, friendWorkLocation?.position, mapsRoutesLib]);
 
@@ -240,6 +245,32 @@ export default function HomePage() {
       toast({ title: "Error Deleting Place", variant: "destructive" });
     }
   };
+
+  const handleShowTransitDirections = async (destination: PinnedLocation) => {
+    if (!friendHomeLocation || !mapsRoutesLib) {
+      toast({ title: "Missing Home Location", description: "Please set friend's home address first.", variant: "destructive" });
+      return;
+    }
+    
+    setSelectedSheetDestinationName(destination.name);
+    setIsDirectionsSheetOpen(true); // Open sheet immediately, show loading state inside if needed
+    setTransitSheetDirections(null); // Clear previous directions
+
+    // Fetch driving directions for the map
+    const drivingRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+    setActiveMapRoute(drivingRoute);
+
+    // Fetch transit directions for the sheet
+    const transitRoute = await getDirections(friendHomeLocation.position, destination.position, mapsRoutesLib, google.maps.TravelMode.TRANSIT);
+    if (transitRoute) {
+      setTransitSheetDirections(transitRoute);
+    } else {
+      toast({ title: "No Transit Route", description: `Could not find public transit directions to ${destination.name}.`, variant: "destructive"});
+      // Optionally keep the sheet open with a message or close it
+      // setIsDirectionsSheetOpen(false); 
+    }
+  };
+
 
   useEffect(() => {
     if (friendHomeLocation) {
@@ -394,6 +425,7 @@ export default function HomePage() {
             locations={otherPinnedLocations} 
             friendLocationSet={!!friendHomeLocation}
             onDeleteLocation={handleDeleteOtherPlace} 
+            onShowDirections={handleShowTransitDirections} // Pass the new handler
             showDeleteButton={true} 
           />
           
@@ -406,13 +438,20 @@ export default function HomePage() {
             friendLocation={friendHomeLocation}
             workLocation={friendWorkLocation} 
             pinnedLocations={otherPinnedLocations}
-            route={homeToWorkRoute} // Pass the route to the map
+            route={activeMapRoute} // Pass the activeMapRoute to the map
           />
         </div>
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
         Built with <span className="text-destructive">&hearts;</span> for good friends in Bangalore.
       </footer>
+      <DirectionsSheet 
+        isOpen={isDirectionsSheetOpen}
+        onOpenChange={setIsDirectionsSheetOpen}
+        directions={transitSheetDirections}
+        destinationName={selectedSheetDestinationName}
+      />
     </div>
   );
 }
+

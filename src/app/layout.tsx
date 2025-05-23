@@ -1,4 +1,5 @@
-import type {Metadata} from 'next';
+"use client";
+
 import { Gamja_Flower } from 'next/font/google';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import './globals.css';
@@ -11,10 +12,11 @@ const gamjaFlower = Gamja_Flower({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Bangalore Buddy',
-  description: 'Find recommendations for your friend in Bangalore!',
-};
+// Metadata should be defined in Server Components or page.tsx files
+// export const metadata: Metadata = {
+//   title: 'Bangalore Buddy',
+//   description: 'Find recommendations for your friend in Bangalore!',
+// };
 
 export default function RootLayout({
   children,
@@ -31,6 +33,11 @@ export default function RootLayout({
   
   return (
     <html lang="en" className={`${gamjaFlower.variable}`}>
+      <head>
+        {/* You can add static meta tags here if needed, or manage dynamically in page.tsx files */}
+        <title>Bangalore Buddy</title>
+        <meta name="description" content="Find recommendations for your friend in Bangalore!" />
+      </head>
       <body className={`font-sans antialiased`}>
         <APIProvider apiKey={googleMapsApiKey || ""}>
           {children}

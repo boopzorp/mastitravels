@@ -1,4 +1,5 @@
 
+
 // src/app/page.tsx
 "use client";
 
@@ -25,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2, Building2 } from 'lucide-react';
+import { Globe, MapPin as MapPinIcon, Home, Briefcase, PlusCircle, Trash2 } from 'lucide-react';
 
 const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 };
 const LOCATIONS_COLLECTION = 'pinned_locations';
@@ -53,7 +54,7 @@ export default function HomePage() {
   const [otherPinnedLocations, setOtherPinnedLocations] = useState<PinnedLocation[]>([]);
   const [aiRecommendations, setAiRecommendations] = useState<string | null>(null);
   
-  const [isAiLoading, setIsAiLoading] = useState(false); // For original AI form
+  const [isAiLoading, setIsAiLoading] = useState(false); 
   const [isHomeSaving, setIsHomeSaving] = useState(false);
   const [isWorkSaving, setIsWorkSaving] = useState(false);
   const [isOtherPlaceSaving, setIsOtherPlaceSaving] = useState(false);
@@ -83,7 +84,7 @@ export default function HomePage() {
         const homeData = friendHomeDocSnap.data() as Omit<PinnedLocation, 'id' | 'distance'>;
         const homeLocation = { ...homeData, id: friendHomeDocSnap.id } as PinnedLocation;
         setFriendHomeLocation(homeLocation);
-        setMapCenter(homeLocation.position); // Center map on home if available
+        setMapCenter(homeLocation.position); 
         homeForm.setValue('address', homeData.address || "");
       } else {
         setFriendHomeLocation(null);
@@ -127,47 +128,31 @@ export default function HomePage() {
     fetchData();
   }, [fetchData]);
 
-  // For original AI Form
   const handleOriginalLocationFormSubmit = async (data: OriginalLocationFormInputType) => {
      if (!db || !db.app?.options?.projectId) {
       toast({ title: "Database Error", description: "Firestore is not configured for saving.", variant: "destructive" });
       return;
     }
+    if (!friendHomeLocation || !friendHomeLocation.address) {
+      toast({ title: "Missing Information", description: "Please set your friend's home address first.", variant: "destructive" });
+      return;
+    }
+
     setIsAiLoading(true);
     setAiRecommendations(null);
 
-    const friendLatLng = await geocodeAddress(data.address);
-    if (friendLatLng) {
-      // This form also updates the friend's primary location if address changes.
-      const newFriendLocationData: Omit<PinnedLocation, 'id' | 'distance'> = {
-        name: "Friend's Place", // This is the primary "Friend" location for AI context
-        category: LocationCategory.FRIEND, 
-        position: friendLatLng,
-        address: data.address,
+    try {
+      const aiInput: GenerateLocationRecommendationsInput = {
+        address: friendHomeLocation.address, // Use saved friend's home address
+        categories: data.categories,
+        details: data.details,
       };
-      try {
-        await setDoc(doc(db, LOCATIONS_COLLECTION, FRIEND_HOME_DOC_ID), newFriendLocationData);
-        const newFriendLocationWithId: PinnedLocation = { ...newFriendLocationData, id: FRIEND_HOME_DOC_ID };
-        setFriendHomeLocation(newFriendLocationWithId); // Update local state
-        homeForm.setValue('address', data.address); // Sync with the dedicated home form
-        if (!friendWorkLocation) setMapCenter(friendLatLng); // Center map if not already centered by work
-        
-        toast({ title: "Friend's location updated for AI!", description: "Using this for recommendations." });
-        
-        const aiInput: GenerateLocationRecommendationsInput = {
-          address: data.address,
-          categories: data.categories,
-          details: data.details,
-        };
-        const result = await generateLocationRecommendations(aiInput);
-        setAiRecommendations(result.recommendations);
-        toast({ title: "AI Recommendations Ready!", description: "Check out the suggestions." });
-      } catch (error) {
-        console.error("Error saving friend's location for AI:", error);
-        toast({ title: "Firestore Save Error", description: "Could not save friend's location for AI.", variant: "destructive" });
-      }
-    } else {
-      toast({ title: "Geocoding Failed", description: "Could not find coordinates for the friend's address for AI.", variant: "destructive" });
+      const result = await generateLocationRecommendations(aiInput);
+      setAiRecommendations(result.recommendations);
+      toast({ title: "AI Recommendations Ready!", description: "Check out the suggestions." });
+    } catch (error) {
+      console.error("Error generating AI recommendations:", error);
+      toast({ title: "AI Error", description: "Could not generate recommendations.", variant: "destructive" });
     }
     setIsAiLoading(false);
   };
@@ -178,7 +163,7 @@ export default function HomePage() {
     if (latLng) {
       const locationData: Omit<PinnedLocation, 'id' | 'distance'> = {
         name: "Friend's Home",
-        category: LocationCategory.FRIEND, // Using FRIEND for the primary home
+        category: LocationCategory.FRIEND,
         position: latLng,
         address: data.address,
       };
@@ -205,7 +190,7 @@ export default function HomePage() {
       try {
         await setDoc(doc(db, LOCATIONS_COLLECTION, FRIEND_WORK_DOC_ID), locationData);
         setFriendWorkLocation({ ...locationData, id: FRIEND_WORK_DOC_ID });
-        if (!friendHomeLocation) setMapCenter(latLng); // Center map if home isn't set
+        if (!friendHomeLocation) setMapCenter(latLng); 
         toast({ title: "Friend's Work Updated!", description: data.address });
       } catch (e) { toast({ title: "Error saving work", variant: "destructive" }); }
     } else { toast({ title: "Geocoding failed for Work", variant: "destructive" }); }
@@ -218,7 +203,7 @@ export default function HomePage() {
     if (latLng) {
       const newPlaceData: Omit<PinnedLocation, 'id' | 'distance'> = {
         name: data.name,
-        category: data.category, // Custom category string
+        category: data.category, 
         position: latLng,
         address: data.address,
         description: data.description,
@@ -227,7 +212,7 @@ export default function HomePage() {
         const docRef = await addDoc(collection(db, LOCATIONS_COLLECTION), newPlaceData);
         setOtherPinnedLocations(prev => [...prev, { ...newPlaceData, id: docRef.id }]);
         toast({ title: "Place Added!", description: data.name });
-        otherPlaceForm.reset(); // Clear form for next entry
+        otherPlaceForm.reset(); 
       } catch (e) { toast({ title: "Error adding place", variant: "destructive" }); }
     } else { toast({ title: "Geocoding failed for new place", variant: "destructive" }); }
     setIsOtherPlaceSaving(false);
@@ -245,21 +230,18 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const allPins = [...otherPinnedLocations];
     if (friendHomeLocation) {
-      // Calculate distances for other pins relative to home
       setOtherPinnedLocations(prevPins =>
         prevPins.map(pin => ({
           ...pin,
           distance: calculateDistance(friendHomeLocation.position, pin.position),
         }))
       );
-      // Potentially calculate distance for work location if displayed in a list
       if (friendWorkLocation) {
          setFriendWorkLocation(workLoc => workLoc ? ({...workLoc, distance: calculateDistance(friendHomeLocation.position, workLoc.position) }) : null);
       }
 
-    } else { // No home location, clear distances
+    } else { 
         setOtherPinnedLocations(prevPins => prevPins.map(pin => ({ ...pin, distance: undefined })));
         if (friendWorkLocation) {
            setFriendWorkLocation(workLoc => workLoc ? ({...workLoc, distance: undefined }) : null);
@@ -267,7 +249,7 @@ export default function HomePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friendHomeLocation, friendWorkLocation?.position.lat, friendWorkLocation?.position.lng, otherPinnedLocations.length]);
-  // Dependency on lat/lng of workLocation and length of otherPinnedLocations to trigger re-calculation
+
 
   if (isDataLoading && (!db || !db.app?.options?.projectId)) {
      return (
@@ -301,14 +283,16 @@ export default function HomePage() {
                         max-h-[calc(100vh-theme(spacing.32))] md:max-h-[calc(100vh-theme(spacing.24))] 
                         scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent p-1">
           
-          {/* Original AI Form */}
-          <OriginalLocationForm onSubmit={handleOriginalLocationFormSubmit} isLoading={isAiLoading} />
+          <OriginalLocationForm 
+            onSubmit={handleOriginalLocationFormSubmit} 
+            isLoading={isAiLoading} 
+            isFriendHomeSet={!!friendHomeLocation} // Pass down if home is set
+          />
 
-          {/* Friend's Home Location */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
-              <CardDescription>Set your friend's primary residential address.</CardDescription>
+              <CardDescription>Set your friend's primary residential address. This is used for AI recommendations.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...homeForm}>
@@ -335,7 +319,6 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Friend's Work Location */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Friend's Work</CardTitle>
@@ -366,7 +349,6 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Other Places to Visit */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center"><PlusCircle className="mr-2 h-5 w-5 text-primary" /> Add Other Places</CardTitle>
@@ -399,8 +381,8 @@ export default function HomePage() {
           <PinnedLocationsList 
             locations={otherPinnedLocations} 
             friendLocationSet={!!friendHomeLocation}
-            onDeleteLocation={handleDeleteOtherPlace} // Pass delete handler
-            showDeleteButton={true} // Enable delete button
+            onDeleteLocation={handleDeleteOtherPlace} 
+            showDeleteButton={true} 
           />
           
           <RecommendationsDisplay recommendations={aiRecommendations} isLoading={isAiLoading} />
@@ -410,7 +392,7 @@ export default function HomePage() {
           <MapComponent
             center={mapCenter}
             friendLocation={friendHomeLocation}
-            workLocation={friendWorkLocation} // Pass work location
+            workLocation={friendWorkLocation} 
             pinnedLocations={otherPinnedLocations}
           />
         </div>
@@ -421,3 +403,4 @@ export default function HomePage() {
     </div>
   );
 }
+

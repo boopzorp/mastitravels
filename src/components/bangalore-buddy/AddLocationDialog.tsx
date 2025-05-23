@@ -1,18 +1,19 @@
 // src/components/bangalore-buddy/AddLocationDialog.tsx
 "use client";
 
-import { useEffect, type FC } from 'react'; // Changed this line
+import { useEffect, type FC } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/input'; // Keep for name field
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DefaultLocationCategories, LocationCategory, type LocationCategoryType } from '@/lib/types';
 import { Pin } from 'lucide-react';
+import AddressAutocompleteInput from './AddressAutocompleteInput'; // Import the new component
 
 const addLocationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -24,7 +25,7 @@ const addLocationSchema = z.object({
 export type AddLocationFormInput = z.infer<typeof addLocationSchema>;
 
 interface AddLocationDialogProps {
-  onSave: (data: AddLocationFormInput) => Promise<void>; // Changed to Promise<void> as form reset is handled in parent
+  onSave: (data: AddLocationFormInput) => Promise<void>;
   isLoading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,19 +37,16 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
     defaultValues: {
       name: "",
       description: "",
-      category: LocationCategory.EXPLORATION, // Default to exploration for new pins
+      category: LocationCategory.EXPLORATION, 
       address: "",
     },
   });
 
   const handleFormSubmit: SubmitHandler<AddLocationFormInput> = async (data) => {
-    await onSave(data); // Parent will handle closing and resetting if successful
-    // No longer resetting form here, parent (HomePage) will reset if needed or handle dialog close.
-    // This ensures form isn't reset if there's a save error and dialog remains open.
+    await onSave(data);
   };
   
-  // Effect to reset form when dialog is closed externally OR after successful save (handled by onOpenChange)
-  useEffect(() => { // Changed this line
+  useEffect(() => {
     if (!open) {
       form.reset();
     }
@@ -58,7 +56,7 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
         onOpenChange(isOpen);
-        if (!isOpen) form.reset(); // Reset form when dialog is closed
+        if (!isOpen) form.reset(); 
       }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
@@ -94,7 +92,11 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 45 Park Avenue, Bangalore" {...field} />
+                    <AddressAutocompleteInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="e.g., 45 Park Avenue, Bangalore"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -116,7 +118,7 @@ const AddLocationDialog: FC<AddLocationDialogProps> = ({ onSave, isLoading, open
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {DefaultLocationCategories.filter(cat => cat !== LocationCategory.FRIEND).map((cat) => ( // Exclude Friend category here
+                      {DefaultLocationCategories.filter(cat => cat !== LocationCategory.FRIEND).map((cat) => ( 
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>

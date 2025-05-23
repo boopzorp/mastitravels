@@ -21,7 +21,7 @@ interface MapComponentProps {
 
 const MapComponent: FC<MapComponentProps> = ({ 
   center, 
-  zoom = 13, // Default zoom increased to 13
+  zoom = 13, 
   friendLocation, 
   workLocation,
   pinnedLocations,
@@ -41,9 +41,9 @@ const MapComponent: FC<MapComponentProps> = ({
     if (!directionsRendererRef.current) {
       directionsRendererRef.current = new mapsRoutesLib.DirectionsRenderer({
         suppressMarkers: true, 
-        preserveViewport: false, // This ensures the route is focused by adjusting viewport
+        preserveViewport: true, // We will manually fit bounds
         polylineOptions: {
-          strokeColor: 'hsl(240, 100%, 50%)', // Changed to standard blue
+          strokeColor: 'hsl(240, 100%, 50%)', 
           strokeOpacity: 0.8,
           strokeWeight: 6,
         }
@@ -52,16 +52,26 @@ const MapComponent: FC<MapComponentProps> = ({
     
     directionsRendererRef.current.setMap(map);
 
-    if (route) {
+    if (route && route.routes && route.routes.length > 0) {
       directionsRendererRef.current.setDirections(route);
+      const routeBounds = route.routes[0].bounds;
+      if (routeBounds) {
+        map.fitBounds(routeBounds, 50); // Fit bounds with 50px padding
+      }
     } else {
       // Clear the route if it's null
-      directionsRendererRef.current.setDirections(undefined);
+      if (directionsRendererRef.current) {
+        directionsRendererRef.current.setDirections(undefined);
+      }
       // Reset map to center on home or default if no route and home exists
       if (friendLocation) {
         map.setCenter(friendLocation.position);
         map.setZoom(zoom); 
-      } else {
+      } else if (workLocation && !friendLocation) { // Added case: center on work if home not set
+        map.setCenter(workLocation.position);
+        map.setZoom(zoom);
+      }
+      else {
         map.setCenter(center);
         map.setZoom(zoom);
       }

@@ -31,7 +31,7 @@ export default function RootLayout({
         <title>mastitravels</title>
         <meta name="description" content="Made with ❤ for mi amor." />
       </head>
-      <body className={`font-sans antialiased`}>
+      <body className={`antialiased`}> {/* Removed font-sans here */}
         <AuthProvider> {/* Wrap with AuthProvider */}
           <APIProvider apiKey={googleMapsApiKey || ""}>
             {children}

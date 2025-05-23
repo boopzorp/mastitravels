@@ -148,16 +148,23 @@ export default function HomePage() {
   }, [fetchData, currentUser]);
 
   useEffect(() => {
-    if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib) {
+    if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib && currentUser === 'admin') {
       const fetchRoute = async () => {
         const routeResult = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
         setActiveMapRoute(routeResult);
       };
       fetchRoute();
-    } else {
+    } else if (friendHomeLocation?.position && friendWorkLocation?.position && mapsRoutesLib && currentUser === 'friend') {
+       const fetchRoute = async () => {
+        const routeResult = await getDirections(friendHomeLocation.position, friendWorkLocation.position, mapsRoutesLib, google.maps.TravelMode.DRIVING);
+        setActiveMapRoute(routeResult);
+      };
+      fetchRoute();
+    }
+     else {
       setActiveMapRoute(null); 
     }
-  }, [friendHomeLocation?.position, friendWorkLocation?.position, mapsRoutesLib]);
+  }, [friendHomeLocation?.position, friendWorkLocation?.position, mapsRoutesLib, currentUser]);
 
   const handleOriginalLocationFormSubmit = async (data: OriginalLocationFormInputType) => {
      if (!db || !db.app?.options?.projectId) {
@@ -193,7 +200,7 @@ export default function HomePage() {
     const latLng = await geocodeAddress(data.address);
     if (latLng) {
       const locationData: Omit<PinnedLocation, 'id' | 'distance'> = {
-        name: "Friend's Home",
+        name: "Amor's Home",
         category: LocationCategory.FRIEND,
         position: latLng,
         address: data.address,
@@ -202,7 +209,7 @@ export default function HomePage() {
         await setDoc(doc(db, LOCATIONS_COLLECTION, FRIEND_HOME_DOC_ID), locationData);
         setFriendHomeLocation({ ...locationData, id: FRIEND_HOME_DOC_ID });
         setMapCenter(latLng);
-        toast({ title: "Friend's Home Updated!", description: data.address });
+        toast({ title: "Amor's Home Updated!", description: data.address });
       } catch (e) { toast({ title: "Error saving home", variant: "destructive" }); }
     } else { toast({ title: "Geocoding failed for Home", variant: "destructive" }); }
     setIsHomeSaving(false);
@@ -213,7 +220,7 @@ export default function HomePage() {
     const latLng = await geocodeAddress(data.address);
     if (latLng) {
       const locationData: Omit<PinnedLocation, 'id' | 'distance'> = {
-        name: "Friend's Work",
+        name: "Amor's Work",
         category: LocationCategory.WORK,
         position: latLng,
         address: data.address,
@@ -222,7 +229,7 @@ export default function HomePage() {
         await setDoc(doc(db, LOCATIONS_COLLECTION, FRIEND_WORK_DOC_ID), locationData);
         setFriendWorkLocation({ ...locationData, id: FRIEND_WORK_DOC_ID });
         if (!friendHomeLocation) setMapCenter(latLng); 
-        toast({ title: "Friend's Work Updated!", description: data.address });
+        toast({ title: "Amor's Work Updated!", description: data.address });
       } catch (e) { toast({ title: "Error saving work", variant: "destructive" }); }
     } else { toast({ title: "Geocoding failed for Work", variant: "destructive" }); }
     setIsWorkSaving(false);
@@ -262,7 +269,7 @@ export default function HomePage() {
 
   const handleShowTransitDirections = async (destination: PinnedLocation) => {
     if (!friendHomeLocation || !mapsRoutesLib) {
-      toast({ title: "Missing Home Location", description: "Please set friend's home address first.", variant: "destructive" });
+      toast({ title: "Missing Home Location", description: "Please set amor's home address first.", variant: "destructive" });
       return;
     }
     
@@ -286,7 +293,7 @@ export default function HomePage() {
       toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
       return;
     }
-    setSelectedSheetDestinationName(friendWorkLocation.name || "Friend's Work");
+    setSelectedSheetDestinationName(friendWorkLocation.name || "Amor's Work");
     setIsDirectionsSheetOpen(true);
     setTransitSheetDirections(null);
 
@@ -306,7 +313,7 @@ export default function HomePage() {
       toast({ title: "Missing Locations", description: "Please set both Home and Work addresses first.", variant: "destructive" });
       return;
     }
-    setSelectedSheetDestinationName(friendHomeLocation.name || "Friend's Home");
+    setSelectedSheetDestinationName(friendHomeLocation.name || "Amor's Home");
     setIsDirectionsSheetOpen(true);
     setTransitSheetDirections(null);
 
@@ -348,7 +355,7 @@ export default function HomePage() {
     return (
       <div className="flex flex-col min-h-screen bg-background font-sans items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-lg text-muted-foreground">Loading MastiTravels...</p>
+        <p className="text-lg text-muted-foreground">loading mastitravels...</p>
       </div>
     );
   }
@@ -365,7 +372,7 @@ export default function HomePage() {
     return (
       <div className="flex flex-col min-h-screen bg-background font-sans items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-lg text-muted-foreground">Loading locations from your MastiTravels database...</p>
+        <p className="text-lg text-muted-foreground">loading locations from your mastitravels database...</p>
       </div>
     );
   }
@@ -391,8 +398,8 @@ export default function HomePage() {
         
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Friend's Home</CardTitle>
-            <CardDescription>Set your friend's primary residential address. Used for AI recommendations and routing.</CardDescription>
+            <CardTitle className="flex items-center"><Home className="mr-2 h-5 w-5 text-primary" /> Amor's Home</CardTitle>
+            <CardDescription>Set your amor's primary residential address. Used for AI recommendations and routing.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...homeForm}>
@@ -433,8 +440,8 @@ export default function HomePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Friend's Work</CardTitle>
-            <CardDescription>Set your friend's workplace address for routing.</CardDescription>
+            <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" /> Amor's Work</CardTitle>
+            <CardDescription>Set your amor's workplace address for routing.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...workForm}>
@@ -527,11 +534,11 @@ export default function HomePage() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Welcome, Friend!</CardTitle>
+              <CardTitle>welcome, mi amor!</CardTitle>
               <CardDescription>Here are some places and routes picked out for you.</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Friend view is under construction. You'll soon see your map and places here!</p>
+              <p>please carry water and a (charged) powerbank, EVERYDAY, EVERYWHERE 🥲</p>
                {friendHomeLocation && friendWorkLocation && (
                 <div className="mt-4 space-y-2">
                   <Button 
@@ -577,7 +584,7 @@ export default function HomePage() {
         <div className="container mx-auto flex items-center justify-between">
           <h1 className="text-3xl font-bold text-primary flex items-center">
             <Globe className="mr-3 h-8 w-8" />
-            MastiTravels {currentUser === 'admin' ? '(Admin)' : '(Friend View)'}
+            MastiTravels
             <MapPinIcon className="ml-3 h-8 w-8" />
           </h1>
           <Button variant="outline" onClick={logout} size="sm">
@@ -604,7 +611,7 @@ export default function HomePage() {
       </main>
 
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
-        Plan your MastiTravels!
+        Made with ❤ for mi amor.
       </footer>
       <DirectionsSheet 
         isOpen={isDirectionsSheetOpen}
@@ -615,3 +622,4 @@ export default function HomePage() {
     </div>
   );
 }
+

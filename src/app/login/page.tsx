@@ -35,7 +35,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center mb-4">
             <Globe className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-bold text-primary">MastiTravels Login</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">mastitravels login</CardTitle>
           <CardDescription>Enter your credentials to access your travel plans.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -48,7 +48,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="admin or masti"
+                placeholder="username"
                 className="text-base"
               />
             </div>
@@ -60,17 +60,17 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="hehe or kamyaabi"
+                placeholder="password"
                 className="text-base"
               />
             </div>
             <Button type="submit" className="w-full text-lg py-3">
-              Login
+              login
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center text-xs text-muted-foreground mt-4">
-          <p>This is a private application. Credentials are pre-set.</p>
+          <p>This is a private application. Made with ❤ for mi amor.</p>
         </CardFooter>
       </Card>
     </div>

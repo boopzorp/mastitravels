@@ -28,8 +28,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${gamjaFlower.variable}`}>
       <head>
-        <title>MastiTravels</title>
-        <meta name="description" content="Plan your MastiTravels adventures!" />
+        <title>mastitravels</title>
+        <meta name="description" content="Made with ❤ for mi amor." />
       </head>
       <body className={`font-sans antialiased`}>
         <AuthProvider> {/* Wrap with AuthProvider */}
